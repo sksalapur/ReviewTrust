@@ -32,7 +32,7 @@ Paste any product URL and get an instant trust score backed by machine learning,
 
 ```
 ┌─────────────────────┐         ┌─────────────────────────────────┐
-│   Android App       │  HTTP   │   FastAPI Backend                │
+│   Android App       │  HTTP   │   FastAPI Backend               │
 │   (Jetpack Compose) │ ──────► │                                 │
 │                     │         │  ┌─────────┐  ┌──────────────┐  │
 │  • URL Input        │         │  │ Scraper │  │ ML Model     │  │
@@ -40,9 +40,9 @@ Paste any product URL and get an instant trust score backed by machine learning,
 │  • Review Cards     │         │  └────┬────┘  └──────┬───────┘  │
 │  • Spike Charts     │         │       │              │          │
 │  • Explanations     │         │  ┌────▼──────────────▼───────┐  │
-│                     │         │  │  Analysis Pipeline         │  │
-│                     │  ◄────  │  │  sentiment · spikes ·      │  │
-│                     │  JSON   │  │  quality · summary · LIME  │  │
+│                     │         │  │  Analysis Pipeline        │  │
+│                     │  ◄────  │  │  sentiment · spikes ·     │  │
+│                     │  JSON   │  │  quality · summary · LIME │  │
 └─────────────────────┘         │  └───────────────────────────┘  │
                                 └─────────────────────────────────┘
 ```

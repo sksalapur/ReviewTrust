@@ -377,6 +377,35 @@ def _scrape_amazon_playwright(asin: str, domain: str) -> List[Dict[str, str]]:
     PROFILE_DIR = _AMAZON_PROFILE_DIR
     PROFILE_DIR.mkdir(parents=True, exist_ok=True)
 
+    # Automatically restore profile from a remote URL if configured via environment variables
+    import os
+    import tempfile
+    import requests
+    import zipfile
+    
+    session_url = os.environ.get("AMAZON_SESSION_URL")
+    if session_url and not _AMAZON_MARKER.exists():
+        logger.info("Downloading Amazon session from configured URL...")
+        try:
+            with tempfile.NamedTemporaryFile(delete=False, suffix=".zip") as tf:
+                r = requests.get(session_url, stream=True, timeout=30)
+                r.raise_for_status()
+                for chunk in r.iter_content(chunk_size=8192):
+                    tf.write(chunk)
+                temp_zip_path = tf.name
+                
+            with zipfile.ZipFile(temp_zip_path, 'r') as zip_ref:
+                zip_ref.extractall(str(PROFILE_DIR.parent)) # Extract to playwright_profiles since internal folder is 'amazon'
+                
+            os.remove(temp_zip_path)
+            if _AMAZON_MARKER.exists():
+                logger.info("Session restored successfully from external URL.")
+            else:
+                 _AMAZON_MARKER.write_text("ok")
+                 logger.info("Session restored and marker created.")
+        except Exception as e:
+            logger.error("Failed to restore session from URL: %s", e)
+
     # Use our own marker file — Chromium's Default/Cookies is written
     # asynchronously and may not exist yet when checked from another process.
     first_run = not _AMAZON_MARKER.exists()
