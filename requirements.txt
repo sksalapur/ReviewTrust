@@ -1,0 +1,38 @@
+# ReviewTrust AI – Python Backend Dependencies
+# Install:  pip install -r requirements.txt
+# Versions are minimum bounds; pip will pick the latest compatible wheel.
+
+# ── Web framework ──────────────────────────────────────────────────────────────
+fastapi>=0.111.0
+uvicorn[standard]>=0.29.0
+pydantic>=2.7.1
+
+# ── Machine Learning (requires wheels for your Python version) ─────────────────
+scikit-learn>=1.5.0
+pandas>=2.2.2
+numpy>=2.0.0
+joblib>=1.4.0
+
+# ── Web scraping ───────────────────────────────────────────────────────────────
+requests>=2.31.0
+beautifulsoup4>=4.12.3
+lxml>=5.2.1
+# curl_cffi provides a libcurl-backed HTTP client that impersonates Chrome's
+# TLS fingerprint — required to bypass Flipkart bot detection.
+curl-cffi>=0.7.0
+# Playwright (real headless Chromium) — required for Amazon which uses
+# JavaScript-generated WAF tokens that only a real browser can produce.
+# After pip install, also run:  python -m playwright install chromium
+playwright>=1.40.0
+
+# ── Explainable AI ─────────────────────────────────────────────────────────────
+# LIME generates human-readable explanations for per-review predictions.
+lime>=0.2.0
+
+# ── Review Analysis Extensions ─────────────────────────────────────────────────
+vaderSentiment>=3.3.2
+sumy>=0.12.0
+nltk>=3.9.4
+
+streamlit==1.32.0
+
