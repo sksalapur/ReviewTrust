@@ -346,7 +346,7 @@ def _extract_asin(url: str) -> Optional[str]:
     return None
 
 
-def _scrape_amazon(product_url: str) -> List[Dict[str, str]]:
+def _scrape_amazon(product_url: str, max_reviews: int = 60) -> List[Dict[str, str]]:
     """
     Scrape Amazon reviews via RapidAPI (real-time-amazon-data5).
     Safely bypasses all Amazon captchas, WAF blocks, and pagination limits.
@@ -366,56 +366,64 @@ def _scrape_amazon(product_url: str) -> List[Dict[str, str]]:
     import requests
 
     url = "https://real-time-amazon-data5.p.rapidapi.com/api/v1/amazon/products/reviews"
-    querystring = {
-        "asin": asin,
-        "country": country_code,
-        "page": "1"
-    }
-
-    # Use environment variable if set, otherwise fallback to the provided key
     api_key = os.environ.get("RAPIDAPI_KEY", "4afe0a5924mshb8896163de886bfp1c35adjsnaea5a43075dc")
-    
     headers = {
         "x-rapidapi-key": api_key,
         "x-rapidapi-host": "real-time-amazon-data5.p.rapidapi.com"
     }
 
-    try:
-        response = requests.get(url, headers=headers, params=querystring, timeout=30)
-        response.raise_for_status()
-        data = response.json()
-    except Exception as e:
-        logger.error("RapidAPI connection failed: %s", e)
-        return []
-
     reviews: List[Dict[str, Any]] = []
+    page = 1
     
-    # RapidAPI occasionally switches between two different backend schemas under the hood. 
-    # Schema A: {"data": {"reviews": [...]}}
-    # Schema B: {"body": {"top_reviews": [...]}}
-    api_reviews = data.get("data", {}).get("reviews", [])
-    if not api_reviews:
-        api_reviews = data.get("body", {}).get("top_reviews", [])
-    
-    if not api_reviews:
-        logger.warning(f"RapidAPI 'reviews' list is empty. JSON keys found: {list(data.keys())}")
-        if "data" in data:
-            logger.warning(f"RapidAPI 'data' keys: {list(data['data'].keys())}")
-        if "body" in data:
-            logger.warning(f"RapidAPI 'body' keys: {list(data['body'].keys())}")
-        logger.debug(f"RapidAPI raw response: {str(data)[:500]}")
-    
-    for rev in api_reviews:
-        text = rev.get("content", "")
-        if not text or len(text) < 10:
-            continue
+    while len(reviews) < max_reviews:
+        querystring = {
+            "asin": asin,
+            "country": country_code,
+            "page": str(page)
+        }
+
+        try:
+            response = requests.get(url, headers=headers, params=querystring, timeout=30)
+            response.raise_for_status()
+            data = response.json()
+        except Exception as e:
+            logger.error("RapidAPI connection failed on page %d: %s", page, e)
+            break
+
+        # RapidAPI occasionally switches between two different backend schemas under the hood. 
+        # Schema A: {"data": {"reviews": [...]}}
+        # Schema B: {"body": {"top_reviews": [...]}}
+        api_reviews = data.get("data", {}).get("reviews", [])
+        if not api_reviews:
+            api_reviews = data.get("body", {}).get("top_reviews", [])
+        
+        if not api_reviews:
+            if page == 1:
+                logger.warning(f"RapidAPI 'reviews' list is empty. JSON keys found: {list(data.keys())}")
+                if "data" in data:
+                    logger.warning(f"RapidAPI 'data' keys: {list(data['data'].keys())}")
+                if "body" in data:
+                    logger.warning(f"RapidAPI 'body' keys: {list(data['body'].keys())}")
+                logger.debug(f"RapidAPI raw response: {str(data)[:500]}")
+            break # No more reviews returned on this page
+        
+        for rev in api_reviews:
+            text = rev.get("content", "")
+            if not text or len(text) < 10:
+                continue
+                
+            reviews.append(_make_review_dict(
+                text, "amazon",
+                reviewer_name=rev.get("reviewer"),
+                review_date=_parse_amazon_date(rev.get("date")) if rev.get("date") else None,
+                verified_purchase=rev.get("verified_purchase", False),
+            ))
             
-        reviews.append(_make_review_dict(
-            text, "amazon",
-            reviewer_name=rev.get("reviewer"),
-            review_date=_parse_amazon_date(rev.get("date")) if rev.get("date") else None,
-            verified_purchase=rev.get("verified_purchase", False),
-        ))
+            if len(reviews) >= max_reviews:
+                break
+                
+        logger.info("  ... scraped %d reviews from page %d", len(api_reviews), page)
+        page += 1
 
     logger.info("Amazon: RapidAPI returned %d reviews for ASIN=%s", len(reviews), asin)
     return reviews
@@ -1524,7 +1532,7 @@ def scrape_reviews(product_url: str, max_reviews: int = 0) -> List[Dict[str, str
     is_meesho   = host in _MEESHO_HOSTS   or "meesho."   in host
 
     if is_amazon:
-        reviews = _scrape_amazon(product_url)
+        reviews = _scrape_amazon(product_url, max_reviews=max_reviews)
     elif is_flipkart:
         reviews = _scrape_flipkart(product_url)
     elif is_nykaa:
