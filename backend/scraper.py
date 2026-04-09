@@ -346,16 +346,57 @@ def _extract_asin(url: str) -> Optional[str]:
 
 
 def _scrape_amazon(product_url: str) -> List[Dict[str, str]]:
-    """Dispatcher: resolve URL then hand off to the Playwright scraper."""
+    """
+    Scrape Amazon reviews via curl_cffi (no login, no Playwright).
+
+    Amazon shows ~8 reviews on the public /dp/ product page without
+    requiring authentication.  This is Amazon's hard public ceiling.
+    Works fully headless on any cloud server (Render) forever.
+    """
     resolved = _resolve_url(product_url)
     asin = _extract_asin(resolved)
     if not asin:
         logger.warning("Could not extract ASIN from: %s", product_url)
         return []
+
     parsed_host = urlparse(resolved).netloc.lower()
     domain = "amazon.in" if "amazon.in" in parsed_host else "amazon.com"
-    logger.info("Amazon  ASIN=%s  domain=%s", asin, domain)
-    return _run_in_process(_scrape_amazon_playwright, asin, domain)
+    base_url = f"https://www.{domain}/dp/{asin}"
+    logger.info("Amazon (curl_cffi)  ASIN=%s  domain=%s", asin, domain)
+
+    html = _fetch(base_url, retries=3)
+    if not html:
+        logger.warning("Failed to fetch Amazon product page for ASIN=%s", asin)
+        return []
+
+    if "ap/signin" in html[:2000] or "Enter the characters you see" in html:
+        logger.warning("Amazon returned a captcha/login page for ASIN=%s", asin)
+        return []
+
+    soup = BeautifulSoup(html, "lxml")
+    noise = {"read more", "see more", "translate review", "show original", "read less"}
+    reviews: List[Dict[str, Any]] = []
+
+    for node in soup.select("div[data-hook='review'], li[data-hook='review']"):
+        body_node = node.select_one("span[data-hook='review-body']")
+        if not body_node: continue
+        
+        text = " ".join(t for t in (s.strip() for s in body_node.stripped_strings) if t.lower() not in noise)
+        if not text or len(text) < 10: continue
+
+        name_node = node.select_one("span.a-profile-name")
+        date_node = node.select_one("span[data-hook='review-date']")
+        verified = bool(node.select_one("span[data-hook='avp-badge']"))
+
+        reviews.append(_make_review_dict(
+            text, "amazon",
+            reviewer_name=name_node.get_text(strip=True) if name_node else None,
+            review_date=_parse_amazon_date(date_node.get_text(strip=True)) if date_node else None,
+            verified_purchase=verified,
+        ))
+
+    logger.info("Amazon: scraped %d reviews for ASIN=%s", len(reviews), asin)
+    return reviews
 
 
 def _scrape_amazon_playwright(asin: str, domain: str) -> List[Dict[str, str]]:
