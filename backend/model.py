@@ -29,7 +29,7 @@ def _load_artifacts():
     print(f"[model.py] Loading vectorizer from : {_VECTORIZER_PATH}")
     mdl = joblib.load(_MODEL_PATH)
     vec = joblib.load(_VECTORIZER_PATH)
-    print("[model.py] ✔ Model and vectorizer loaded.\n")
+    print("[model.py] Model and vectorizer loaded.\n")
     return mdl, vec
 
 
