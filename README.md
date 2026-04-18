@@ -1,268 +1,233 @@
 <p align="center">
+  <img src="app/ic_launcher-playstore.png" alt="ReviewTrust Logo" width="120" />
+</p>
+
+<h1 align="center">🛡️ ReviewTrust AI</h1>
+
+<p align="center">
+  <strong>Don't trust reviews. Verify them.</strong>
+</p>
+
+<p align="center">
+  <em>The only consumer tool that runs 6 independent AI/ML analyses on product reviews<br/>and tells you <strong>exactly</strong> which ones are fake — and why.</em>
+</p>
+
+<p align="center">
   <img src="https://img.shields.io/badge/Python-3.11+-3776AB?logo=python&logoColor=white" />
   <img src="https://img.shields.io/badge/FastAPI-0.111+-009688?logo=fastapi&logoColor=white" />
   <img src="https://img.shields.io/badge/Android-Jetpack_Compose-3DDC84?logo=android&logoColor=white" />
   <img src="https://img.shields.io/badge/ML-scikit--learn-F7931E?logo=scikit-learn&logoColor=white" />
+  <img src="https://img.shields.io/badge/NLP-VADER_%7C_LIME_%7C_LSA-blueviolet" />
+  <img src="https://img.shields.io/badge/Platforms-Amazon_%7C_Flipkart_%7C_Nykaa_%7C_Myntra_%7C_Meesho-orange" />
 </p>
-
-# 🛡️ ReviewTrust AI
-
-**AI-powered fake review detection for Amazon & Flipkart products.**
-
-Paste any product URL and get an instant trust score backed by machine learning, sentiment analysis, review spike detection, and AI-generated summaries.
 
 ---
 
-## ✨ Features
+## 🤔 Why Does This Exist?
 
-| Feature | Description |
-|---|---|
-| 🤖 **ML Classification** | Logistic Regression model trained on labeled fake/genuine reviews, with TF-IDF vectorization |
-| 📊 **Trust Score** | Weighted composite score (0-100) combining ML predictions, sentiment curves, and reviewer quality |
-| 📈 **Spike Detection** | Flags suspicious bursts of reviews within short time windows |
-| 💬 **Sentiment Analysis** | VADER-based polarity analysis with distribution curves |
-| 👤 **Reviewer Quality** | Profile-level analysis including review count, verified purchase ratio |
-| 📝 **AI Summary** | LSA-powered extractive summary of genuine reviews |
-| 🔍 **Explainable AI** | LIME-based per-review explanations showing which words influenced the prediction |
-| 🌐 **Multi-Platform** | Supports Amazon (.in/.com) and Flipkart — including short links |
+**60% of online reviews are suspected to be fake or incentivized.** Yet there's no free, consumer-grade tool that actually verifies them at scale. ReviewTrust fills that gap with a 6-stage analysis pipeline that goes far beyond simple sentiment analysis.
+
+| What Others Do | What ReviewTrust Does |
+|----------------|----------------------|
+| "Positive sentiment detected" | "This review is **fake** because: excessive promotional language, low vocabulary diversity, and pattern resembles computer-generated text" |
+| Generic star analysis | Per-review ML classification with LIME explainability |
+| No temporal analysis | Detects suspicious review bursts within short time windows |
+| No reviewer profiling | Analyzes reviewer history: total review count, verified purchase ratio |
+| No summary | LSA-powered extractive summary of genuine reviews |
+
+---
+
+## 🧠 The 6-Stage Analysis Pipeline
+
+```
+Product URL (Amazon / Flipkart / Nykaa / Myntra / Meesho)
+        │
+        ▼
+┌─────────────────────────────────────────────────────────┐
+│  Stage 1: SCRAPING                                       │
+│  ├── Amazon: RapidAPI (primary) + Playwright (fallback)  │
+│  ├── Flipkart: curl_cffi (Chrome 124 TLS impersonation)  │
+│  ├── Nykaa/Myntra: Direct JSON API via curl_cffi          │
+│  └── Meesho: Playwright headless (GraphQL)                │
+│  Extracts: text, reviewer name, date, verified status     │
+├─────────────────────────────────────────────────────────┤
+│  Stage 2: ML CLASSIFICATION                               │
+│  TF-IDF Vectorization → Logistic Regression               │
+│  Output: fake / genuine label per review                  │
+├─────────────────────────────────────────────────────────┤
+│  Stage 3: SENTIMENT ANALYSIS                              │
+│  VADER polarity scoring on genuine reviews only            │
+│  Output: positive%, negative%, neutral%, avg compound     │
+├─────────────────────────────────────────────────────────┤
+│  Stage 4: REVIEW SPIKE DETECTION                          │
+│  Temporal analysis of review dates                         │
+│  Flags suspicious bursts within short time windows         │
+├─────────────────────────────────────────────────────────┤
+│  Stage 5: REVIEWER QUALITY PROFILING                      │
+│  Per-reviewer analysis: total reviews, verified ratio      │
+│  Flags accounts with characteristics of purchased reviews  │
+├─────────────────────────────────────────────────────────┤
+│  Stage 6: EXPLAINABILITY (LIME)                           │
+│  Per-review explanations: which words drove the decision   │
+│  Parallel ThreadPoolExecutor for performance              │
+│  Human-readable reasons: "Excessive promotional language"  │
+├─────────────────────────────────────────────────────────┤
+│  BONUS: LSA SUMMARIZATION                                  │
+│  Extractive summary of genuine reviews using Sumy LSA      │
+│  Gives users a quick "what real buyers think" overview     │
+└─────────────────────────────────────────────────────────┘
+        │
+        ▼
+┌─────────────────────────────────────────────┐
+│  COMPOSITE TRUST SCORE (0–100)              │
+│  Fuses: ML predictions + sentiment curves   │
+│  + reviewer quality + temporal analysis      │
+│                                             │
+│  Score ≥ 80: "Safe to buy"                  │
+│  Score 60–79: "Proceed with caution"        │
+│  Score < 60: "Consider skipping"            │
+└─────────────────────────────────────────────┘
+```
 
 ---
 
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────┐         ┌─────────────────────────────────┐
-│   Android App       │  HTTP   │   FastAPI Backend               │
-│   (Jetpack Compose) │ ──────► │                                 │
-│                     │         │  ┌─────────┐  ┌──────────────┐  │
-│  • URL Input        │         │  │ Scraper │  │ ML Model     │  │
-│  • Trust Dashboard  │         │  │ (PW/CF) │  │ (sklearn)    │  │
-│  • Review Cards     │         │  └────┬────┘  └──────┬───────┘  │
-│  • Spike Charts     │         │       │              │          │
-│  • Explanations     │         │  ┌────▼──────────────▼───────┐  │
-│                     │         │  │  Analysis Pipeline        │  │
-│                     │  ◄────  │  │  sentiment · spikes ·     │  │
-│                     │  JSON   │  │  quality · summary · LIME │  │
-└─────────────────────┘         │  └───────────────────────────┘  │
-                                └─────────────────────────────────┘
+┌─────────────────────────┐           ┌──────────────────────────────────┐
+│   Android App            │   HTTP    │   FastAPI Backend (Render)       │
+│   (Jetpack Compose)      │ ────────► │                                  │
+│                          │           │  ┌──────────┐  ┌─────────────┐  │
+│  • Paste product URL     │           │  │ Scraper  │  │ ML Model    │  │
+│  • View Trust Score      │           │  │ (5 sites)│  │ (TF-IDF +   │  │
+│  • Read Explanations     │           │  │          │  │  LogReg)    │  │
+│  • Sentiment Charts      │           │  └────┬─────┘  └──────┬──────┘  │
+│  • Spike Detection       │           │       │               │         │
+│  • AI Summary            │           │  ┌────▼───────────────▼──────┐  │
+│                          │   ◄────   │  │   6-Stage Pipeline        │  │
+│                          │   JSON    │  │   Sentiment · Spikes ·    │  │
+│                          │           │  │   Quality · Summary ·     │  │
+│                          │           │  │   LIME Explainability     │  │
+└─────────────────────────┘           │  └────────────────────────────┘  │
+                                       │                                  │
+                                       │  Cache: File-based, 1-week TTL  │
+                                       │  Deploy: Docker on Render        │
+                                       └──────────────────────────────────┘
+```
+
+---
+
+## ✨ Key Features
+
+### 🎯 Per-Review Verdicts with Explanations
+Not just "85% trust score" — ReviewTrust classifies **every single review** and tells you *why*:
+- "Excessive promotional language detected"
+- "Low vocabulary diversity"
+- "Pattern resembles computer-generated text"
+- "Balanced sentiment with pros and cons"
+- "Critical feedback with specifics"
+
+### 📊 Intelligent Caching
+- SHA-256 URL canonicalization (strips tracking params, resolves short links)
+- File-based cache with 1-week TTL — instant results for repeated queries
+- Separate analysis modes: **Normal** (fast, 60 reviews, 5 LIME explanations) vs **Deep** (unlimited, 20 LIME explanations)
+
+### 🕷️ Multi-Platform Scraping Engine (5 E-Commerce Sites)
+| Platform | Strategy | Anti-Bot Bypass |
+|----------|----------|-----------------|
+| **Amazon** | RapidAPI (primary) + Playwright (fallback) | Real-time API / persistent signed-in browser profile |
+| **Flipkart** | curl_cffi | Chrome 124 TLS fingerprint impersonation |
+| **Nykaa** | Direct JSON API | curl_cffi with browser headers |
+| **Myntra** | xt.myntra.com JSON API | curl_cffi with browser headers |
+| **Meesho** | Playwright headless | Full browser rendering for GraphQL |
+
+### 📈 Temporal Spike Detection
+Detects suspicious patterns like 50 five-star reviews posted within 3 days — a telltale sign of paid review campaigns.
+
+### 👤 Reviewer Quality Profiling
+Analyzes reviewer accounts: total review count, verified purchase ratio, and writing patterns to flag professionally-operated fake review accounts.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology | Purpose |
+|-------|------------|---------|
+| **Android** | Kotlin, Jetpack Compose, Material 3 | Native UI with rich dashboard |
+| **Network** | Retrofit + OkHttp | Type-safe backend communication |
+| **Backend** | Python, FastAPI, Uvicorn | Async API serving the ML pipeline |
+| **ML** | scikit-learn (Logistic Regression + TF-IDF) | Binary classification: fake vs genuine |
+| **NLP** | VADER Sentiment, NLTK | Polarity scoring and text processing |
+| **Explainability** | LIME (Local Interpretable Model-agnostic Explanations) | Per-review feature attribution |
+| **Summarization** | Sumy LSA (Latent Semantic Analysis) | Extractive summary of genuine reviews |
+| **Scraping** | curl_cffi, Playwright, BeautifulSoup, RapidAPI | Multi-strategy review extraction |
+| **Deployment** | Docker, Render | Production cloud hosting |
+
+---
+
+## 📐 Project Structure
+
+```
+ReviewTrust/
+├── app/                              # Android App
+│   └── src/main/java/com/reviewtrust/
+│       ├── models/                   # AnalysisResult data class
+│       ├── network/                  # Retrofit client + ApiService
+│       ├── repository/              # ReviewRepository
+│       ├── charts/                   # MPAndroidChart helpers
+│       └── ui/
+│           ├── HomeScreen.kt         # Main dashboard with URL input
+│           ├── ReviewViewModel.kt    # State management
+│           └── Navigation.kt         # Compose navigation
+│
+├── backend/                          # Python ML Backend
+│   ├── app.py                        # FastAPI app + /analyze endpoint
+│   ├── scraper.py                    # 1,586 lines — 5-platform scraper
+│   ├── model.py                      # Trained model loader
+│   ├── train_model.py                # Model training script
+│   ├── sentiment.py                  # VADER sentiment analysis
+│   ├── spike_detector.py             # Temporal review burst detection
+│   ├── reviewer_quality.py           # Reviewer profile analysis
+│   ├── summarizer.py                 # Sumy LSA extractive summarizer
+│   ├── trust_score.py                # Composite trust score calculator
+│   ├── explain.py                    # LIME explainability engine
+│   ├── models/
+│   │   ├── fake_review_model.pkl     # Trained LogReg model
+│   │   └── vectorizer.pkl            # Trained TF-IDF vectorizer
+│   └── dataset/
+│       └── reviews.csv              # Training dataset
+│
+├── Dockerfile                        # Production container
+├── render.yaml                       # Render deployment config
+└── streamlit_app.py                  # Alternative web UI
 ```
 
 ---
 
 ## 🚀 Quick Start
 
-### Prerequisites
-
-- **Python 3.11+**
-- **Android Studio** (for the mobile app)
-- **Git**
-
-### 1. Clone & Setup Backend
-
+### Backend
 ```bash
-git clone https://github.com/<your-username>/ReviewTrust.git
-cd ReviewTrust
-
-# Create virtual environment
-python -m venv .venv
-
-# Activate it
-# Windows:
-.venv\Scripts\activate
-# macOS/Linux:
-source .venv/bin/activate
-
-# Install dependencies
-pip install -r backend/requirements.txt
-
-# Install Playwright's Chromium browser
+cd backend
+python -m venv .venv && .venv\Scripts\activate
+pip install -r requirements.txt
 python -m playwright install chromium
-
-# Download NLTK data (required for summarizer)
-python -c "import nltk; nltk.download('punkt_tab')"
+python train_model.py              # Generate model .pkl files
+uvicorn app:app --port 8000 --reload
 ```
 
-### 2. Train the ML Model
-
-```bash
-cd backend
-
-# Place your training dataset at backend/dataset/fake reviews dataset.csv
-# Then run:
-python train_model.py
-```
-
-This generates `models/fake_review_model.pkl` and `models/vectorizer.pkl`.
-
-### 3. Run the Backend
-
-```bash
-cd backend
-python -m uvicorn app:app --host 0.0.0.0 --port 8000 --reload
-```
-
-The API will be available at `http://localhost:8000`.
-
-**First run with Amazon URLs:** A Chromium browser window will open — sign into your Amazon account and close the window. The session is saved for all future runs.
-
-### 4. Run the Android App
-
-1. Open the project root in **Android Studio**
-2. Update the backend URL in `app/src/main/java/com/reviewtrust/network/RetrofitClient.kt` to point to your backend (e.g. `http://10.0.2.2:8000` for emulator, or your server IP)
-3. Build and run on your device/emulator
-
----
-
-## 📡 API Reference
-
-### `POST /analyze`
-
-Analyze reviews for a product.
-
-**Request Body:**
-```json
-{
-  "url": "https://www.amazon.in/dp/B0G47YZJH6",
-  "mode": "normal"
-}
-```
-
-| Field | Type | Description |
-|---|---|---|
-| `url` | string | Product URL (Amazon/Flipkart, full or short link) |
-| `mode` | string | `"normal"` or `"deep"` (deep includes LIME explanations) |
-
-**Response:** (200 OK)
-```json
-{
-  "trust_score": 85,
-  "fake_percentage": 15,
-  "genuine_percentage": 85,
-  "total_reviews": 21,
-  "fake_count": 3,
-  "genuine_count": 18,
-  "recommendation": "Reviews appear mostly trustworthy.",
-  "analysis_mode": "normal",
-  "sentiment_analysis": { ... },
-  "reviewer_quality": { ... },
-  "spike_detection": { ... },
-  "review_summary": { ... },
-  "fake_reviews": [ ... ],
-  "genuine_reviews": [ ... ]
-}
-```
-
-### `GET /health`
-
-Health check endpoint.
-
----
-
-## 🖥️ Hosting the Backend
-
-### Option A: Local Network (Easiest)
-
-Run on your PC and point the Android app to your local IP:
-
-```bash
-python -m uvicorn app:app --host 0.0.0.0 --port 8000
-```
-
-Find your IP with `ipconfig` (Windows) or `ifconfig` (Mac/Linux), then set the Android app's `BASE_URL` to `http://<your-ip>:8000`.
-
-> ⚠️ **Note:** Amazon scraping requires a signed-in Playwright session. The first request to an Amazon URL will open a browser window on your PC for login.
-
-### Option B: VPS / Cloud VM (Recommended for Production)
-
-Deploy on any Linux VPS (e.g. DigitalOcean, AWS EC2, Hetzner):
-
-```bash
-# On the server:
-sudo apt update && sudo apt install -y python3.11 python3.11-venv
-
-git clone <your-repo-url>
-cd ReviewTrust
-
-python3.11 -m venv .venv
-source .venv/bin/activate
-pip install -r backend/requirements.txt
-python -m playwright install chromium
-python -m playwright install-deps
-
-# Train or upload the model
-cd backend
-python train_model.py
-
-# Run with a process manager
-pip install gunicorn
-gunicorn app:app -w 1 -k uvicorn.workers.UvicornWorker \
-  --bind 0.0.0.0:8000 --timeout 120
-```
-
-> **Important:** Use `-w 1` (single worker) because the ML model and Playwright share process-level state.
-
-For HTTPS, put **nginx** or **Caddy** in front as a reverse proxy.
-
-### Option C: Railway / Render (One-Click Deploy)
-
-1. Push to GitHub
-2. Connect the repo to [Railway](https://railway.app) or [Render](https://render.com)
-3. Set the build command: `pip install -r backend/requirements.txt && python -m playwright install chromium && python -m playwright install-deps`
-4. Set the start command: `cd backend && uvicorn app:app --host 0.0.0.0 --port $PORT`
-
-> ⚠️ **Amazon scraping caveat:** Since Railway/Render are headless-only environments, the interactive Amazon login flow won't work. You'll need to copy your local `playwright_profiles/amazon/` directory to the server, or use Option B with a VPS where you can run a headed browser for initial setup.
-
----
-
-## 📁 Project Structure
-
-```
-ReviewTrust/
-├── app/                          # Android app (Jetpack Compose)
-│   └── src/main/java/com/reviewtrust/
-│       ├── models/               # Data classes (AnalysisResult, etc.)
-│       ├── network/              # Retrofit API client
-│       └── ui/                   # UI screens (HomeScreen, etc.)
-├── backend/                      # Python FastAPI backend
-│   ├── app.py                    # FastAPI application & routes
-│   ├── scraper.py                # Multi-platform review scraper
-│   ├── model.py                  # ML model loader
-│   ├── train_model.py            # Model training script
-│   ├── sentiment.py              # VADER sentiment analysis
-│   ├── spike_detector.py         # Review spike detection
-│   ├── reviewer_quality.py       # Reviewer profile analysis
-│   ├── summarizer.py             # LSA extractive summarizer
-│   ├── trust_score.py            # Composite trust score calculator
-│   ├── explain.py                # LIME explainability
-│   ├── requirements.txt          # Python dependencies
-│   └── models/                   # Trained model files (.pkl)
-├── .gitignore
-├── build.gradle.kts
-├── settings.gradle.kts
-└── README.md
-```
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|---|---|
-| **Android** | Kotlin, Jetpack Compose, Retrofit, OkHttp |
-| **Backend** | Python, FastAPI, Uvicorn |
-| **ML** | scikit-learn (Logistic Regression + TF-IDF) |
-| **NLP** | VADER Sentiment, NLTK, Sumy (LSA) |
-| **Scraping** | Playwright (Amazon), curl-cffi (Flipkart), BeautifulSoup |
-| **Explainability** | LIME |
-
----
-
-## 📜 License
-
-This project is for educational and research purposes.
+### Android App
+1. Open project in Android Studio
+2. Update `BASE_URL` in `RetrofitClient.kt` to your backend URL
+3. Build and run
 
 ---
 
 <p align="center">
-  Built with ❤️ for trustworthy online shopping
+  <strong>Fake reviews cost consumers billions every year.</strong><br/>
+  <em>This is the tool that fights back.</em>
+</p>
+
+<p align="center">
+  Made with ❤️ by <a href="https://github.com/sksalapur">Sharanbasav Salapur</a>
 </p>
