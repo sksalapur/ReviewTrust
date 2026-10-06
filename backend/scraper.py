@@ -229,6 +229,8 @@ def _pw_headless_page(
                     "--disable-blink-features=AutomationControlled",
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--single-process",
                 ],
             )
             ctx = browser.new_context(
@@ -584,6 +586,8 @@ def _scrape_amazon_playwright(asin: str, domain: str) -> List[Dict[str, str]]:
                         "--disable-blink-features=AutomationControlled",
                         "--no-sandbox",
                         "--disable-dev-shm-usage",
+                        "--disable-gpu",
+                        "--single-process",
                     ],
                 )
                 context.add_init_script(
@@ -617,6 +621,8 @@ def _scrape_amazon_playwright(asin: str, domain: str) -> List[Dict[str, str]]:
                         "--disable-blink-features=AutomationControlled",
                         "--no-sandbox",
                         "--disable-dev-shm-usage",
+                        "--disable-gpu",
+                        "--single-process",
                     ],
                 )
                 context.add_init_script(
@@ -893,6 +899,8 @@ def _scrape_flipkart_playwright(reviews_base: str) -> List[Dict[str, Any]]:
                     "--disable-blink-features=AutomationControlled",
                     "--no-sandbox",
                     "--disable-dev-shm-usage",
+                    "--disable-gpu",
+                    "--single-process",
                 ],
             )
             ctx = browser.new_context(
